@@ -9,42 +9,58 @@ export OFFWORLD_GYM_ROOT=`pwd`
 sudo apt update
 sudo apt install -y python3.5 python3.5-dev libbullet-dev
 
-# create virtual environment
-sudo apt install -y virtualenv
-mkdir ~/ve
-virtualenv -p python3.5 ~/ve/py35gym
-source ~/ve/py35gym/bin/activate
-pip install --upgrade pip
+pip install --user numpy
+pip install --user tensorflow-gpu
+pip install --user keras==2.2.4
+pip install --user opencv-python
+pip install --user catkin_pkg
+pip install --user empy
+pip install --user requests
+pip install --user defusedxml
+pip install --user rospkg
+pip install --user matplotlib
+pip install --user netifaces
+pip install --user regex
+pip install --user psutil
+pip install --user gym
+pip install --user python-socketio
+pip install --user scikit-image
+cd $OFFWORLD_GYM_ROOT
+pip install --user -e .
+
+# Python3.6
+sudo su
+cd /opt
+wget https://www.python.org/ftp/python/3.6.3/Python-3.6.3.tgz
+tar -xvf Python-3.6.3.tgz
+cd Python-3.6.3
+./configure
+make
+make install
+curl https://bootstrap.pypa.io/get-pip.py | sudo -H python3.6
+exit
+
+pip3.6 install --user setuptools
+pip3.6 install --user numpy
+pip3.6 install --user tensorflow-gpu
+pip3.6 install --user keras==2.2.4
+pip3.6 install --user opencv-python
+pip3.6 install --user catkin_pkg
+pip3.6 install --user empy
+pip3.6 install --user requests
+pip3.6 install --user defusedxml
+pip3.6 install --user matplotlib
+pip3.6 install --user netifaces
+pip3.6 install --user regex
+pip3.6 install --user psutil
+pip3.6 install --user gym
+pip3.6 install --user python-socketio
+pip3.6 install --user scikit-image
+cd $OFFWORLD_GYM_ROOT
+pip3.6 install --user -e .
+
 source /opt/ros/kinetic/setup.bash
 
-echo "Virtual environment set up done."
-
-# intall Python packages
-pip install numpy
-pip install tensorflow-gpu
-pip install keras==2.2.4
-pip install opencv-python
-pip install catkin_pkg
-pip install empy
-pip install requests
-pip install defusedxml
-pip install rospkg
-pip install matplotlib
-pip install netifaces
-pip install regex
-pip install psutil
-pip install gym
-pip install python-socketio
-pip install scikit-image
-pip install bullet
-cd $OFFWORLD_GYM_ROOT
-pip install -e .
-
-# install customized version of keras-rl
-mkdir $OFFWORLD_GYM_ROOT/assets
-cd $OFFWORLD_GYM_ROOT/assets
-git clone https://github.com/offworld-projects/keras-rl.git -b offworld-gym
-cd keras-rl
 pip install -e .
 
 # install additional ROS packages
@@ -63,45 +79,14 @@ else
   exit 1
 fi
 
-# build Python 3.5 version of catkin *without* installing it system-wide
-cd $OFFWORLD_GYM_ROOT/assets
-echo "Building catkin here: `pwd`."
-git clone https://github.com/ros/catkin.git -b kinetic-devel
-cd $OFFWORLD_GYM_ROOT/assets/catkin
-mkdir build && cd build && cmake .. && make
-echo "Catkin build for Python 3.5 complete."
-
-# prepare for building the workspace
-cd /usr/lib/x86_64-linux-gnu
-sudo ln -s libboost_python-py35.so libboost_python3.so
-
-# build ROS workspace
 cd $OFFWORLD_GYM_ROOT/offworld_gym/envs/gazebo/catkin_ws/src
-$OFFWORLD_GYM_ROOT/assets/catkin/bin/catkin_init_workspace
 
-git clone https://github.com/ros/xacro.git -b kinetic-devel
-git clone https://github.com/ros/ros.git -b kinetic-devel
-git clone https://github.com/ros/ros_comm.git -b kinetic-devel
-git clone https://github.com/ros/common_msgs.git -b indigo-devel
-git clone https://github.com/ros/catkin.git -b kinetic-devel
-git clone https://github.com/ros/ros_comm_msgs.git -b indigo-devel
-git clone https://github.com/ros/gencpp.git -b indigo-devel
-git clone https://github.com/jsk-ros-pkg/geneus.git -b master
-git clone https://github.com/ros/genlisp.git -b groovy-devel
-git clone https://github.com/ros/genmsg.git -b indigo-devel
-git clone https://github.com/ros/genpy.git -b kinetic-devel
-git clone https://github.com/RethinkRobotics-opensource/gennodejs.git -b kinetic-devel
-git clone https://github.com/ros/std_msgs.git -b groovy-devel
-git clone https://github.com/ros/geometry.git -b indigo-devel
 git clone https://github.com/ros/geometry2.git -b indigo-devel
 git clone https://github.com/ros-simulation/gazebo_ros_pkgs.git -b kinetic-devel
-git clone https://github.com/ros-controls/ros_control.git -b kinetic-devel
-git clone https://github.com/ros/dynamic_reconfigure.git -b master
-git clone https://github.com/offworld-projects/offworld_rosbot_description.git -b kinetic-devel
 git clone https://github.com/ros-perception/vision_opencv.git -b kinetic
-
+git clone https://github.com/offworld-projects/offworld_rosbot_description.git -b kinetic-devel
 cd ..
-$OFFWORLD_GYM_ROOT/assets/catkin/bin/catkin_make -j1
+catkin_make
 
 # Milestone 1: Python and system packages
 if [ $? -eq 0 ]
