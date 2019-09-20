@@ -30,7 +30,9 @@ cd $OFFWORLD_GYM_ROOT
 pip install --user -e .
 
 # Python3.6
+sudo add-apt-repository ppa:jonathonf/python-3.6 -y
 sudo apt-get install -y python3.6 python3.6-dev
+curl https://bootstrap.pypa.io/get-pip.py | sudo -H python3.6
 
 pip3.6 install --user setuptools
 pip3.6 install --user numpy
@@ -55,10 +57,9 @@ pip3.6 install --user -e .
 
 source /opt/ros/kinetic/setup.bash
 
-pip install -e .
 
 # install additional ROS packages
-sudo apt install -y ros-kinetic-grid-map ros-kinetic-frontier-exploration \
+sudo apt install --allow-unauthenticated -y ros-kinetic-grid-map ros-kinetic-frontier-exploration \
                     ros-kinetic-ros-controllers ros-kinetic-rospack \
                     libignition-math2 libignition-math2-dev python3-tk libeigen3-dev \
                     ros-kinetic-roslint
@@ -79,7 +80,7 @@ sudo sh -c 'echo "deb http://packages.osrfoundation.org/gazebo/ubuntu-stable `ls
 wget http://packages.osrfoundation.org/gazebo.key -O - | sudo apt-key add -
 sudo apt-get update
 sudo apt-get install libignition-math4-dev
-
+sudo rm -f /opt/ros/kinetic/lib/python2.7/dist-packages/cv2.so
 cd $OFFWORLD_GYM_ROOT/offworld_gym/envs/gazebo/catkin_ws/src
 
 #git clone https://github.com/ros/geometry2.git -b indigo-devel
