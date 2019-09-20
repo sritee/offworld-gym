@@ -10,6 +10,10 @@ __maintainer__  = "Ashish Kumar"
 __email__       = "ashish.kumar@offworld.ai"
 __status__      = "Development"
 
+import sys
+if (sys.version_info > (3, 0)):
+    sys.path.insert(1,  '~/.local/lib/python3.6/site-packages')
+
 import numpy as np
 import cv2
 
@@ -18,6 +22,9 @@ from std_srvs.srv import Empty as Empty_srv
 from cv_bridge import CvBridge, CvBridgeError
 from gazebo_msgs.srv import GetModelState, SetModelState
 from gazebo_msgs.msg import ModelState
+from utils import TB_RL, GetLogPath
+if (sys.version_info > (3, 0)):
+    sys.path.remove('~/.local/lib/python3.6/site-packages')
 
 class ImageUtils(object):
     """Image utility functions used by the OffWorld Gym environments

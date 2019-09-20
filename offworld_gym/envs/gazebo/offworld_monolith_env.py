@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2.7
 # Copyright offworld.ai 2019
 from offworld_gym import version
 
@@ -16,6 +16,7 @@ import time
 import numpy as np
 from scipy.spatial import distance
 import pdb
+from pyquaternion import Quaternion
 
 #gym
 import gym
@@ -32,7 +33,7 @@ from offworld_gym.envs.common.actions import FourDiscreteMotionActions
 import rospy
 from std_srvs.srv import Empty as Empty_srv
 from geometry_msgs.msg import Twist
-import tf
+import pyquaternion
 from gazebo_msgs.srv import GetModelState
 from gazebo_msgs.msg import ModelState
 from sensor_msgs.msg import Image
@@ -200,15 +201,9 @@ class OffWorldMonolithEnv(GazeboGymEnv):
         try:
             ms = self._get_model_state(name)
             if ms is not None:
-                quaternion = (
-                    ms.pose.orientation.x,
-                    ms.pose.orientation.y,
-                    ms.pose.orientation.z,
-                    ms.pose.orientation.w
-                )
-
-                euler = tf.transformations.euler_from_quaternion(quaternion)
-                state = (ms.pose.position.x, ms.pose.position.y, ms.pose.position.z, euler[2])
+                quaternion = Quaternion(ms.pose.orientation.w,  ms.pose.orientation.x, ms.pose.orientation.y, ms.pose.orientation.z,)
+                yaw, _, _ = quaternion.yaw_pitch_roll
+                state = (ms.pose.position.x, ms.pose.position.y, ms.pose.position.z, yaw)
                 return state
             else:
                 return None

@@ -7,7 +7,7 @@ export OFFWORLD_GYM_ROOT=`pwd`
 
 # make sure we have Python 3.5
 sudo apt update
-sudo apt install -y python3.5 python3.5-dev libbullet-dev
+sudo apt install -y libbullet-dev
 
 pip install --user numpy
 pip install --user tensorflow-gpu
@@ -25,20 +25,12 @@ pip install --user psutil
 pip install --user gym
 pip install --user python-socketio
 pip install --user scikit-image
+pip install --user pyquaternion
 cd $OFFWORLD_GYM_ROOT
 pip install --user -e .
 
 # Python3.6
-sudo su
-cd /opt
-wget https://www.python.org/ftp/python/3.6.3/Python-3.6.3.tgz
-tar -xvf Python-3.6.3.tgz
-cd Python-3.6.3
-./configure
-make
-make install
-curl https://bootstrap.pypa.io/get-pip.py | sudo -H python3.6
-exit
+sudo apt-get install -y python3.6 python3.6-dev
 
 pip3.6 install --user setuptools
 pip3.6 install --user numpy
@@ -56,6 +48,8 @@ pip3.6 install --user psutil
 pip3.6 install --user gym
 pip3.6 install --user python-socketio
 pip3.6 install --user scikit-image
+pip3.6 install --user pyquaternion
+
 cd $OFFWORLD_GYM_ROOT
 pip3.6 install --user -e .
 
@@ -79,14 +73,21 @@ else
   exit 1
 fi
 
+cd /usr/lib/x86_64-linux-gnu
+sudo ln -s libboost_python-py35.so libboost_python3.so
+sudo sh -c 'echo "deb http://packages.osrfoundation.org/gazebo/ubuntu-stable `lsb_release -cs` main" > /etc/apt/sources.list.d/gazebo-stable.list'
+wget http://packages.osrfoundation.org/gazebo.key -O - | sudo apt-key add -
+sudo apt-get update
+sudo apt-get install libignition-math4-dev
+
 cd $OFFWORLD_GYM_ROOT/offworld_gym/envs/gazebo/catkin_ws/src
 
-git clone https://github.com/ros/geometry2.git -b indigo-devel
-git clone https://github.com/ros-simulation/gazebo_ros_pkgs.git -b kinetic-devel
+#git clone https://github.com/ros/geometry2.git -b indigo-devel
+#git clone https://github.com/ros-simulation/gazebo_ros_pkgs.git -b kinetic-devel
 git clone https://github.com/ros-perception/vision_opencv.git -b kinetic
-git clone https://github.com/offworld-projects/offworld_rosbot_description.git -b kinetic-devel
+
 cd ..
-catkin_make
+catkin_make -DPYTHON_EXECUTABLE=/usr/bin/python3.6 -DPYTHON_INCLUDE_DIR=/usr/include/python3.6m -DPYTHON_LIBRARY=/usr/lib/x86_64-linux-gnu/libpython3.6m.so
 
 # Milestone 1: Python and system packages
 if [ $? -eq 0 ]
@@ -101,13 +102,11 @@ echo "ROS dependencies build complete."
 
 # build the Gym Shell script
 echo '#!/usr/bin/env bash' > $OFFWORLD_GYM_ROOT/scripts/gymshell.sh
-echo "source ~/ve/py35gym/bin/activate" >> $OFFWORLD_GYM_ROOT/scripts/gymshell.sh
-echo "unset PYTHONPATH" >> $OFFWORLD_GYM_ROOT/scripts/gymshell.sh
 echo "source /opt/ros/kinetic/setup.bash" >> $OFFWORLD_GYM_ROOT/scripts/gymshell.sh
 echo "source $OFFWORLD_GYM_ROOT/offworld_gym/envs/gazebo/catkin_ws/devel/setup.bash --extend" >> $OFFWORLD_GYM_ROOT/scripts/gymshell.sh
 echo "export GAZEBO_MODEL_PATH=$OFFWORLD_GYM_ROOT/offworld_gym/envs/gazebo/catkin_ws/src/gym_offworld_monolith/models:$GAZEBO_MODEL_PATH" >> $OFFWORLD_GYM_ROOT/scripts/gymshell.sh
-echo 'export PYTHONPATH=~/ve/py35gym/lib/python3.5/site-packages:$PYTHONPATH' >> $OFFWORLD_GYM_ROOT/scripts/gymshell.sh
 echo "export OFFWORLD_GYM_ROOT=$OFFWORLD_GYM_ROOT" >> $OFFWORLD_GYM_ROOT/scripts/gymshell.sh
+echo 'export PYTHONPATH=$OFFWORLD_GYM_ROOT/assets/keras-rl:$PYTHONPATH' >> $OFFWORLD_GYM_ROOT/scripts/gymshell.sh
 chmod +x $OFFWORLD_GYM_ROOT/scripts/gymshell.sh
 
 # update to gazebo 7.13

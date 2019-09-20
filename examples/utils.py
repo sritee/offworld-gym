@@ -3,10 +3,12 @@ __copyright__   = "Copyright offworld.ai 2019"
 __license__     = "None"
 __status__      = "Development"
 
+import sys
+if (sys.version_info > (3, 0)):
+    sys.path.insert(1,  '~/.local/lib/python3.6/site-packages')
+
 import random
 import numpy as np
-import cv2
-import tf
 import rospy
 import math, time, os, sys, csv, errno, re
 import re
@@ -14,9 +16,6 @@ from math import sqrt
 import scipy
 import scipy.misc
 
-from sensor_msgs.msg import Image
-from gazebo_msgs.msg import ModelStates
-from cv_bridge import CvBridge, CvBridgeError
 import skimage
 import skimage.transform
 from skimage.measure import block_reduce
@@ -35,8 +34,6 @@ import tensorboard.backend.event_processing.event_accumulator as event_accumulat
 import signal
 import matplotlib.pyplot as plt
 
-from std_msgs.msg import Float32, Float32MultiArray, Bool
-
 from rl.callbacks import ModelIntervalCheckpoint, FileLogger, TrainIntervalLogger, Callback
 from rl.random import OrnsteinUhlenbeckProcess, GaussianWhiteNoiseProcess, RandomProcess 
 from rl.policy import Policy, BoltzmannQPolicy
@@ -45,6 +42,9 @@ from rl.core import Processor
 
 from keras.layers import Lambda
 
+if (sys.version_info > (3, 0)):
+    sys.path.remove('~/.local/lib/python3.6/site-packages')
+ 
 
 # GLOBAL VARS
 IMG_H = 240
@@ -310,255 +310,6 @@ class TB_convs(Callback):
     def on_train_end(self, _):
         self.writer.close()
 
-def process_depth_msg(depth_msg):
-    '''converts a depth image into numpy float32 array'''
-    cv_image = CvBridge().imgmsg_to_cv2(depth_msg, "32FC1")
-    img = np.asarray(cv_image, dtype=np.float32)
-    img = np.nan_to_num(img) # inf -> big value, nan -> zero
-    img = np.reshape(img, (1, img.shape[0], img.shape[1], 1))
-    return img
-
-
-def process_img_msg(img_msg):
-    ''' Unpacks ROS image, converts it to cv2, then to numpy.
-    numpy image is currently downsampled by (2, 2, 1)'''
-
-    img = CvBridge().imgmsg_to_cv2(img_msg, "bgr8")
-    # img = np.asarray(img)
-
-    #TODO: make final decision on downsampling
-    # img = block_reduce(img, block_size=(2, 2, 1), func=np.mean)
-
-    img = np.asarray(img)
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    img = scipy.misc.imresize(img, (IMG_H, IMG_W, IMG_C))
-
-    img = np.reshape(img, (1, img.shape[0], img.shape[1], img.shape[2]))
-    return img
-
-
-def corresponding_msg(bag_generator, sync_t):
-
-    t = rospy.Time(0)
-    between = []
-    msg = None
-    while (t < sync_t):
-        try:
-            top, msg, t = next(bag_generator)
-            between.append(msg)
-        except StopIteration:
-            raise StopIteration
-
-    return (msg, bag_generator, between)
-
-def process_odom_msg(odom_msg):
-    '''Unpacks ROS odom, transforms quaternion and packs state information into
-    numpy array'''
-
-    quaternion = (
-            odom_msg.pose.pose.orientation.x,
-            odom_msg.pose.pose.orientation.y,
-            odom_msg.pose.pose.orientation.z,
-            odom_msg.pose.pose.orientation.w
-    )
-    #not completely necessary, but allows for intuitive reward design
-    euler = tf.transformations.euler_from_quaternion(quaternion)
-
-    #state: xy \dot{x}\dot{y} yaw \dot{yaw}
-    state = [odom_msg.pose.pose.position.x,
-            odom_msg.pose.pose.position.y,
-            odom_msg.twist.twist.linear.x,
-            euler[2],
-            odom_msg.twist.twist.angular.z]
-
-    config = np.asarray([state])
-    return config
-
-def process_pose(pose):
-    pose_vector = pose.pose_vector
-    pose_vector = np.asarray([pose_vector])
-    return pose_vector
-
-def process_joint_msg(joint_msg):
-    '''Unpacks ROS Twist, packs only active controls'''
-    ctrl = joint_msg.position[:]
-    ctrl = np.asarray([ctrl])
-    return ctrl
-
-def process_ctrl_msg(ctrl_msg):
-    '''Unpacks ROS Twist, packs only active controls'''
-    ctrl = [ctrl_msg.linear.x,
-            ctrl_msg.angular.z]
-    ctrl = np.asarray([ctrl])
-    return ctrl
-
-def process_model_msg(model_states_msg):
-    '''Unpacks Model States, outputs target model locations.'''
-    model_names = model_states_msg.name
-    model_poses = model_states_msg.pose
-    target_names = ['pebble', 'Goal']
-
-    locations = []
-    for i, model_name in enumerate(model_names):
-        for target_name in target_names:
-            if target_name in model_name:
-                curr_position = model_poses[i].position
-                locations.append([curr_position.x,
-                                  curr_position.y,
-                                  curr_position.z])
-
-    return locations
-
-def find_target(subject_odom, target_options):
-    '''Find most appropriate target with current odometry value. Current
-    approach is minimum XY-distance target'''
-
-    min_distance = float('inf')
-    for target in target_options:
-        curr_distance = sqrt((subject_odom[0] - target[0])**2 +
-                             (subject_odom[1] - target[1])**2)
-        if curr_distance < min_distance:
-            min_distance = curr_distance
-            best_target = target
-
-    best_target = np.asarray([best_target])
-    return best_target
-
-def in_FOV(m_x, m_y, o_x, o_y, o_yaw):
-    '''Returns whether or not (m_x, m_y) is in 60 degree FOV of state (o_x, o_y,
-    o_yaw)'''
-    x = m_x - o_x
-    y = m_y - o_y
-    # rx = math.cos(-o_yaw) * x - math.sin(-o_yaw) * y
-    # ry = math.sin(-o_yaw) * x + math.cos(-o_yaw) * y
-
-    # angle = math.atan2(ry, rx)
-    angle = math.atan2(y, x)
-
-    return abs(o_yaw - angle) <= math.pi/8
-
-                # curr_odom = np.asarray([[float(data['o_x']),
-                                            # float(data['o_y']),
-                                            # float(data['o_x_dot']),
-                                            # float(data['o_y_dot']),
-                                            # float(data['o_yaw']),
-                                            # float(data['o_yaw_dot'])]])
-                # curr_ctrl = np.asarray([[float(data['c_x'])/self.max_xctrl,
-                                        # float(data['c_z'])/self.max_yawctrl]])
-
-#TODO: this is currently very experimental, formalize later
-def task_mode(odom, ctrl):
-    """
-    Task Modes:
-        1. Drive towards pebble
-        2. Find goal
-        3. Drive towards goal
-        4. Release pebble
-    """
-    curr_mode = [0.0, 0.0, 0.0, 0.0]
-    if ctrl[0] < 0:
-        curr_mode[3] = 1.0
-    else:
-        if abs(ctrl[1]) > .33:
-            curr_mode[1] = 1.0
-        else:
-            if odom[2] < 0:
-                curr_mode[0] = 1.0
-            else:
-                curr_mode[2] = 1.0
-    return curr_mode
-
-
-
-# ----------------------------------------------------------------------------------------
-
-def test_exploration_policy(policy):
-    class null_agent():
-        def __init__(self):
-            self.step = 0
-            self.training = True
-    max_steps = policy.nb_steps
-    policy.agent = null_agent()
-    x = np.array(range(max_steps))
-    y = np.zeros(max_steps)
-    for i in range(max_steps):
-        policy.agent.step = i
-        y[i] = policy.get_current_value()
-    plt.plot(x, y)
-    plt.show()
-
-def rectMask(in_tensor, h, w, rect, name=""):
-    v1, v2, v3, v4 = rect
-    mask = createRectMask(h, w, v1, v2, v3, v4).flatten() # output is 1's where to mask
-    mask = 1.0 - mask # keep the non-rectangle parts
-    mask = K.variable(value=mask)
-    
-    out_tensor = Lambda(lambda x: x * mask, output_shape=(h*w,), name='rect_mask'+str(name))(in_tensor) #  keras.layers.Multiply()([in_tensor, mask])
-    return out_tensor
-
-def actionToXY(predicted, targetImgSize):
-    # predicted is same order as keras
-    # targetImgSize is order: h, w (same as keras)
-    out = np.array( np.unravel_index(predicted.squeeze().argmax(), targetImgSize[0:2]), dtype='float32') # get x, y coords of max value
-    outFlat = (out + 0.5) / targetImgSize[0:2] # get to center of cell, convert to ratio
-    return outFlat #order: h, w
-
-def actionToXYList(predicted, targetImgSize, num_peaks=15):
-    predicted = predicted.squeeze()
-    h, w = targetImgSize[0:2]
-    if not np.array_equal(predicted.shape, [h, w] ):
-        predicted = np.reshape(predicted, [h, w])
-    return getPeaks(predicted, indices=True, num_peaks=num_peaks)
-
-#def getImgSizes():
-#    inputImgSize = (240, 320, 1) # for depth input
-#    targetImgSize = (50, 50, 1)
-#
-#    return inputImgSize, targetImgSize, criticImgSize
-def getChiselerInputs(data):
-    curr_state = np.asarray([[float(data['x']),
-                            float(data['y']),
-                            float(data['z']),
-                            float(data['r']),
-                            float(data['p']),
-                            float(data['yaw']),
-                            ]])
-    curr_action = np.asarray([[float(data['f_dAng'])]])
-    return curr_state, curr_action
-
-def actionIdxToXY(predictedIdx, targetImgSize):
-    out = np.array( np.unravel_index(predictedIdx, targetImgSize[0:2]), dtype='float32')
-    outFlat = (out + 0.5) / targetImgSize[0:2] # get to center of cell, convert to ratio
-    return outFlat #order: h, w
-
-def getPeaks(image, threshold=0.15, minPixelDist=3, indices=False, num_peaks=15):
-    # REMINDER: this fxn switches the x-y order
-    h, w = image.shape
-    coordinates = peak_local_max(image, min_distance=minPixelDist, threshold_rel=threshold, num_peaks=num_peaks)
-    if False:
-        plt.imshow(image)
-        plt.hold(True)
-        plt.plot(coordinates[:, 1], coordinates[:, 0], 'r.') # blue dots, and the coord sys is all setup correct
-        plt.show()
-        #pdb.set_trace()
-    x_cam = (coordinates[:, 1:2] + 0.5) / w # switch order to: w, h
-    y_cam = (coordinates[:, 0:1] + 0.5) / h # must be ratio so that we can upscale it to camera image
-    if indices:
-        return x_cam, y_cam, coordinates[:, 1:2], coordinates[:, 0:1]
-    else:
-        return x_cam, y_cam
-
-def do_kdtree(targets,queries):
-    # for each point in 'queries', find the closest point in 'targets', and return the index
-    mytree = scipy.spatial.cKDTree(targets)
-    dist, indexes = mytree.query(queries)
-    return indexes
-
-def generate_fake_experiences(nb_samples, env, callbacks):
-    # generate fake experiences based off dataset that can be entered in memory in the following form:
-    #self.memory.append(self.recent_observation, self.recent_action, reward, terminal, training=True)
-    pass
-
 class TB_RL(TB_convs):
     def __init__(self, *args, **kwargs):
         super(TB_RL, self).__init__(*args, **kwargs)
@@ -628,28 +379,3 @@ class TB_RL_chiseler(TB_RL_custom_rewards):
     
     def on_episode_end(self, epoch, logs=None):
         self.reset()
-
-class PublishQValue(Policy):
-    def __init__(self, parent_policy, *args, **kargs):
-        self.parent_policy = parent_policy
-        self.pub = rospy.Publisher("/chiseler/maxQ", Float32, queue_size=5)
-
-    @property
-    def metrics_names(self):
-        return self.parent_policy.metrics_names
-
-    @property
-    def metrics(self):
-        return self.parent_policy.metrics
-
-    def select_action(self, **kwargs):
-        q_values = kwargs['q_values']
-        pdb.set_trace()
-
-        maxQValue = np.max(q_values)
-        self.pub.publish(Float32(maxQValue))
-        return self.parent_policy.select_action(**kwargs)
-
-    def get_config(self):
-        return self.parent_policy.get_config()
-

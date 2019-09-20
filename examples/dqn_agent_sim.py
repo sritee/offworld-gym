@@ -1,7 +1,12 @@
+
+import sys
+if (sys.version_info > (3, 0)):
+    sys.path.insert(1,  '~/.local/lib/python3.6/site-packages')
+
 import os
 os.environ['CUDA_DEVICE_ORDER']='PCI_BUS_ID'
 os.environ['CUDA_VISIBLE_DEVICES']='0'
-import sys, pdb, time, glob
+import pdb, time, glob
 import numpy as np
 from datetime import datetime
 import pickle
@@ -29,7 +34,8 @@ from rl.processors import Processor
 from rl.callbacks import ModelIntervalCheckpoint, TerminateTrainingOnFileExists, SaveDQNTrainingState
 
 from utils import TB_RL, GetLogPath
-
+if (sys.version_info > (3, 0)):
+    sys.path.remove('~/.local/lib/python3.6/site-packages')
 
 # define paths
 NAME              = 'sim_offworld_monolith-{}'.format(datetime.now().strftime("%Y-%m-%d-%H-%M-%S"))

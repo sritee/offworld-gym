@@ -30,7 +30,6 @@ from offworld_gym.envs.common.exception.gym_exception import GymException
 import rospy
 import rospkg
 
-
 class GazeboGymEnv(gym.Env):
     """Abstract Gazebo based Gym environments
     """
