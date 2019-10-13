@@ -5,12 +5,14 @@
 cd ..
 export OFFWORLD_GYM_ROOT=`pwd`
 
-# make sure we have Python 3.5
 sudo apt update
-sudo apt install -y libbullet-dev
+sudo apt install -y libbullet-dev python-pip git curl wget
 
-pip install --user numpy
-pip install --user tensorflow-gpu
+pip install --user --upgrade pip
+pip install --user --upgrade setuptools
+pip install --user numpy==1.16.5
+pip install --user scipy==1.2.2
+pip install --user tensorflow-gpu==1.14.0
 pip install --user keras==2.2.4
 pip install --user opencv-python
 pip install --user catkin_pkg
@@ -31,18 +33,20 @@ pip install --user -e .
 
 # Python3.6
 sudo add-apt-repository ppa:jonathonf/python-3.6 -y
+sudo apt-get update
 sudo apt-get install -y python3.6 python3.6-dev
 curl https://bootstrap.pypa.io/get-pip.py | sudo -H python3.6
 
-pip3.6 install --user setuptools
+pip3.6 install --upgrade --user setuptools
 pip3.6 install --user numpy
-pip3.6 install --user tensorflow-gpu
+pip3.6 install --user scipy
+pip3.6 install --user tensorflow==1.14.0
 pip3.6 install --user keras==2.2.4
 pip3.6 install --user opencv-python
 pip3.6 install --user catkin_pkg
 pip3.6 install --user empy
 pip3.6 install --user requests
-pip3.6 install --user defusedxml
+pip3.6 install --user defusedxml 
 pip3.6 install --user matplotlib
 pip3.6 install --user netifaces
 pip3.6 install --user regex
@@ -54,7 +58,7 @@ pip3.6 install --user pyquaternion
 
 cd $OFFWORLD_GYM_ROOT
 pip3.6 install --user -e .
-
+		
 source /opt/ros/kinetic/setup.bash
 
 
@@ -79,7 +83,7 @@ sudo ln -s libboost_python-py35.so libboost_python3.so
 sudo sh -c 'echo "deb http://packages.osrfoundation.org/gazebo/ubuntu-stable `lsb_release -cs` main" > /etc/apt/sources.list.d/gazebo-stable.list'
 wget http://packages.osrfoundation.org/gazebo.key -O - | sudo apt-key add -
 sudo apt-get update
-sudo apt-get install libignition-math4-dev
+sudo apt-get install -y libignition-math4-dev
 sudo rm -f /opt/ros/kinetic/lib/python2.7/dist-packages/cv2.so
 cd $OFFWORLD_GYM_ROOT/offworld_gym/envs/gazebo/catkin_ws/src
 
@@ -113,7 +117,6 @@ chmod +x $OFFWORLD_GYM_ROOT/scripts/gymshell.sh
 # update to gazebo 7.13
 # http://answers.gazebosim.org/question/18934/kinect-in-gazebo-not-publishing-topics/
 sudo sh -c 'echo "deb http://packages.osrfoundation.org/gazebo/ubuntu-stable `lsb_release -cs` main" > /etc/apt/sources.list.d/gazebo-stable.list'
-sudo apt install wget
 wget http://packages.osrfoundation.org/gazebo.key -O - | sudo apt-key add -
 sudo apt-get update
 sudo apt-get install -y gazebo7 libgazebo7-dev
@@ -122,4 +125,4 @@ printf "\n\nInstallation complete\n---------------------\n\n"
 printf "To setup a shell for OffWorld Gym run\n\n\tsource $OFFWORLD_GYM_ROOT/scripts/gymshell.sh\n\nin each new terminal to activate Gym Shell.\n"
 printf "Or add to your ~/.bashrc by running\n\n\techo \"source $OFFWORLD_GYM_ROOT/scripts/gymshell.sh\" >> ~/.bashrc\n\n---------------------\n\n"
 printf "To test Real environment:\n\t(add instructions here)\n\n"
-printf "To test Sim environment: open two terminals, activate Gym Shell, and run:\n\t1. roslaunch gym_offworld_monolith env_bringup.launch\n\t2. gzclient\n\n"
+printf "To test Sim environment: open two terminals, activate Gym Shell in each one, and run:\n\t1. roslaunch gym_offworld_monolith env_bringup.launch\n\t2. gzclient\n\n"
