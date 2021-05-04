@@ -327,11 +327,10 @@ class OffWorldMonolithEnv(GazeboGymEnv):
         """
         try:
             assert model_name is not None or model_name != ''
-
             goal_state = ModelState()
             goal_state.model_name = model_name
-            goal_state.pose.position.x = 0.0
-            goal_state.pose.position.y = 0.0
+            goal_state.pose.position.x = 1.25
+            goal_state.pose.position.y = 0.5
             goal_state.pose.position.z = 0.20
 
             GazeboUtils.move_to_position(goal_state)

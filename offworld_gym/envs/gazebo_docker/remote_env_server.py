@@ -23,7 +23,7 @@ HEART_BEAT_WAIT_TOLERANCE_SECONDS = 150
 
 
 if __name__ == '__main__':
-
+    assert False
     env_class = parse_env_class_from_environ()
     channel_type = parse_channel_type_from_environ()
     random_init = parse_random_init_from_environ()

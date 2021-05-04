@@ -14,21 +14,43 @@
 
 import gym
 import logging
+import time
+import numpy as np
 
-import offworld_gym
-from offworld_gym.envs.common.channels import Channels
+from ou_noise import OUNoise
+
+import matplotlib.pyplot as plt
 
 logging.basicConfig(level=logging.DEBUG)
 
 # create the environment
-env = gym.make("OffWorldDockerMonolithContinuousSim-v0", channel_type=Channels.RGB_ONLY)
+from offworld_gym.envs.common.channels import Channels
+env = gym.make("OffWorldDockerMonolithContinuousSim-v0", channel_type=Channels.DEPTH_ONLY)
 env.seed(42)
 
 logging.info(f"action space: {env.action_space} observation_space: {env.observation_space}")
-while True:
+ep = 0
+cnt = 0
+ou_noise = OUNoise(env.action_space.shape[0])
+while ep < 50:
     env.reset()
+    ou_noise.reset()
     done = False
     while not done:
-        sampled_action = env.action_space.sample()
-        env.render()
+        #sampled_action = env.action_space.sample()
+        sampled_action = ou_noise.noise()
+        np.clip(sampled_action, -0.5, 0.5)
+        #sampled_action[0] = 0
+        #env.render()
         obs, rew, done, info = env.step(sampled_action)
+        downsampled = obs[0, ::4, ::4, 0]
+        plt.imshow(downsampled)
+        plt.show()
+        #plt.imshow(obs[0, :, :, 0])
+        #plt.show()
+        time.sleep(0.05)
+        
+    if rew:
+        cnt +=1
+    ep += 1    
+print(cnt, ep)
